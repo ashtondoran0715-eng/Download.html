@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Shelf Life</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:400,600&display=swap" />
+    <meta name="description" content="Shelf Life: Track pantry food expiration and use your camera to scan barcodes to quickly add items.">
+    <meta property="og:title" content="Shelf Life - Pantry & Barcode App" />
+    <meta property="og:description" content="Track food shelf life, scan barcodes with your camera, and manage your pantry from any device." />
+    <meta property="og:type" content="website" />
+    <meta name="theme-color" content="#38c172" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect fill='%2338c172' x='6' y='10' width='20' height='16' rx='4'/><rect fill='%23fff' x='10' y='14' width='12' height='8' rx='2'/><path fill='%23f7b731' d='M16 9a3 3 0 006-3H10a3 3 0 006 3z'/></svg>">
+    <style>
+      :root {
+        --main-green: #38c172;
+        --main-orange: #f7b731;
+        --warn-red: #ff5e57;
+        --bg: #f9fafc;
+        --white: #fff;
+        --grey: #e9e9e9;
+        --text: #222;
+        --radius: 12px;
+      }
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: var(--bg);
+        font-family: 'Inter', Arial, sans-serif;
+        color: var(--text);
+        min-height: 100vh;
+      }
+      #root {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      header {
+        background: var(--white);
+        border-bottom: 1.5px solid var(--grey);
+        padding: 7px 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+      }
+      header h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-left: 18px;
+        color: var(--main-green);
+        letter-spacing: 2px;
+      }
+      nav {
+        display: flex;
+        gap: 0.5rem;
+        margin-right: 15px;
+      }
+      nav button {
+        background: var(--main-green);
+        color: #fff;
+        border: none;
+        border-radius: var(--radius);
+        padding: 9px 18px;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: background 0.15s;
+        cursor: pointer;
+      }
+      nav button.selected, nav button:active {
+        background: var(--main-orange);
+        color: var(--text);
+      }
+      main {
+        flex: 1;
+        max-width: 700px;
+        margin: 0 auto;
+        width: 100%;
+        padding: 16px;
+      }
+      .dashboard-stats {
+        display: flex;
+        gap: 1.5rem;
+        margin-bottom: 23px;
+      }
+      .stat-card {
+        background: var(--white);
+        border-radius: var(--radius);
+        box-shadow: 0 2px 12px #0001;
+        padding: 24px 26px;
+        text-align: center;
+        flex: 1;
+      }
+      .stat-big {
+        font-size: 2.1rem;
+        font-weight: 700;
+        color: var(--main-green);
+      }
+      .expiring-soon {
+        color: var(--warn-red);
+      }
+      .section-title {
+        font-size: 1.13rem;
+        font-weight: 600;
+        margin: 22px 0 10px 3px;
+        color: var(--main-green);
+        letter-spacing: 0.5px;
+      }
+      .pantry-list, .recipe-list {
+        display: grid;
+        gap: 14px;
+        margin-top: 10px;
+      }
+      .pantry-card, .recipe-card {
+        background: var(--white);
+        border-radius: var(--radius);
+        box-shadow: 0 1px 8px #0001;
+        padding: 17px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: box-shadow 0.12s;
+        position: relative;
+      }
+      .pantry-card .item-details,
+      .recipe-card .recipe-details {
+        flex: 1;
+      }
+      .pantry-card .item-name {
+        font-weight: 600;
+        font-size: 1.13rem;
+      }
+      .pantry-card .expiry {
+        display: flex;
+        align-items: center;
+        font-size: 0.97rem;
+      }
+      .expiry-countdown {
+        margin-left: 7px;
+        font-weight: bold;
+      }
+      .expiring {
+        color: var(--warn-red);
+      }
+      .expiring-soon-item {
+        background: #ffe8e5;
+        border-left: 6px solid var(--warn-red);
+      }
+      .expiring-medium {
+        color: var(--main-orange);
+      }
+      .pantry-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        margin-left: 13px;
+      }
+      .icon-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1.08rem;
+        padding: 5px;
+        border-radius: 40%;
+        color: var(--main-green);
+        transition: background 0.15s;
+      }
+      .icon-btn:hover {
+        background: var(--grey);
+      }
+      .add-btn {
+        display: inline-block;
+        background: var(--main-green);
+        color: white;
+        border-radius: var(--radius);
+        padding: 0.4em 1.3em;
+        font-weight: 600;
+        font-size: 1.03rem;
+        border: none;
+        margin: 10px 0 15px 0;
+        cursor: pointer;
+        transition: background 0.14s;
+        text-decoration: none;
+      }
+      .add-btn:active {
+        background: var(--main-orange);
+        color: var(--text);
+      }
+      form {
+        background: var(--white);
+        border-radius: var(--radius);
+        padding: 21px 18px;
+        box-shadow: 0 1px 8px #0001;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin-top: 1.2rem;
+        max-width: 376px;
+      }
+      label {
+        font-weight: 600;
+        font-size: 0.97rem;
+        margin-bottom: 0.4em;
+      }
+      input, select {
+        padding: 8px;
+        border: 1.5px solid var(--grey);
+        border-radius: var(--radius);
+        font-size: 1.04rem;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+      }
+      .alert {
+        color: var(--warn-red);
+        font-weight: 500;
+        margin-top: 8px;
+      }
+      .recipe-card {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 15px;
+        max-width: 520px;
+      }
+      .recipe-img {
+        width: 64px;
+        height: 64px;
+        object-fit: cover;
+        border-radius: 8px;
+        background: var(--grey);
+        margin-right: 10px;
+      }
+      .recipe-details {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        flex: 1;
+      }
+      .recipe-name {
+        font-weight: 600;
+        font-size: 1.12rem;
+        color: var(--main-orange);
+      }
+      .ingredients-list {
+        font-size: 0.98rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-top: 4px;
+      }
+      .ingredient {
+        border-radius: 8px;
+        font-size: 0.97rem;
+        padding: 2px 7px;
+        background: var(--grey);
+        color: #222b;
+      }
+      .ingredient.in-pantry {
+        background: var(--main-green);
+        color: white;
+      }
+      .ingredient.soon-expire {
+        background: var(--main-orange);
+        color: #fff;
+      }
+      .use-recipe-btn {
+        margin-top: 10px;
+        background: var(--main-orange);
+        color: #fff;
+        font-weight: 600;
+        border: none;
+        border-radius: var(--radius);
+        padding: 8px 20px;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: background 0.16s;
+        display: inline-block;
+      }
+      .use-recipe-btn:active {
+        background: var(--main-green);
+      }
+      .tutorial {
+        background: var(--main-orange);
+        color: #222;
+        border-radius: var(--radius);
+        padding: 16px 18px;
+        font-size: 1rem;
+        margin: 18px 0;
+        font-weight: 500;
+      }
+      .barcode-scanner-modal {
+        position: fixed;
+        z-index: 9999;
+        left: 0;
+        top: 0;
+        width: 100vw;
+        height: 100vh;
+        background: #0008;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .barcode-scanner-inner {
+        background: #fff;
+        border-radius: 18px;
+        padding: 17px;
+        box-shadow: 0 2px 16px #0002;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 340px;
+        max-width: 94vw;
+      }
+      .barcode-scanner-video-wrapper {
+        width: 300px;
+        max-width: 88vw;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      video.barcode-video {
+        border-radius: 12px;
+        background: #111;
+        width: 100%;
+        max-width: 280px;
+        min-height: 150px;
+        margin-bottom: 10px;
+      }
+      .barcode-close-btn {
+        margin-top: 11px;
+        padding: 5px 20px;
+        border-radius: 8px;
+        border: none;
+        background: var(--warn-red);
+        color: #fff;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+      }
+      footer {
+        width: 100vw;
+        color: #888;
+        font-size: 0.97rem;
+        padding: 17px 4px 15px 4px;
+        text-align: center;
+        background: transparent;
+        margin-top: 24px;
+      }
+      footer a {
+        color: var(--main-orange);
+        text-decoration: underline;
+        font-weight: 500;
+      }
+      @media (max-width: 600px) {
+        main {
+          padding: 7px;
+        }
+        .dashboard-stats {
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+        .pantry-card, .recipe-card {
+          flex-direction: column;
+          align-items: stretch;
+          padding: 14px 12px;
+        }
+        .recipe-img {
+          margin-right: 0;
+        }
+        .barcode-scanner-inner {
+          min-width: unset;
+          width: 98vw;
+          padding: 7px;
+        }
+        .barcode-scanner-video-wrapper,
+        video.barcode-video {
+          width: 95vw;
+          max-width: unset;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <footer>
+      Shelf Life &copy; 2024 &mdash;
+      <a href="https://openfoodfacts.org/" target="_blank" rel="noopener">OpenFoodFacts</a> for product info.
+      <span style="margin-left:14px;"><a href="https://github.com/" target="_blank" rel="noopener">Source&nbsp;Code</a></span>
+    </footer>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@2.0.0-beta.5/dist/quagga.min.js"></script>
+    <script type="text/babel">
+
+      // Helper functions
+      const getTodayDateStr = () => {
+        const d = new Date();
+        return d.toISOString().slice(0,10);
+      };
+      const daysBetween = (a, b) => {
+        // date string 'YYYY-MM-DD'
+        const dt1 = new Date(a);
+        const dt2 = new Date(b);
+        return Math.ceil((dt2 - dt1) / (24*60*60*1000));
+      };
+      const loadData = (key, defaultVal) => {
+        try {
+          const str = localStorage.getItem(key);
+          return str ? JSON.parse(str) : defaultVal;
+        } catch {
+          return defaultVal;
+        }
+      };
+      const saveData = (key, val) => {
+        try {
+          localStorage.setItem(key, JSON.stringify(val));
+        } catch {}
+      };
+
+      // Open Food Facts lookup
+      async function lookupFoodByBarcode(barcode) {
+        if (!barcode) return null;
+        try {
+          const r = await fetch(
+            `https://world.openfoodfacts.org/api/v2/product/${barcode}?fields=product_name,categories,expiration_date`
+          );
+          const j = await r.json();
+          if (j.status === 1 && j.product && j.product.product_name) {
+            let defaultShelfLifeDays = 7; // fallback, 1 week generic
+            let cat = j.product.categories?.split(",")[0]?.trim() || '';
+            if (cat.match(/milk|dairy/i)) defaultShelfLifeDays = 6;
+            if (cat.match(/meat|poultry|fish/i)) defaultShelfLifeDays = 3;
+            if (cat.match(/vegetable|greens|produce|fruit/i)) defaultShelfLifeDays = 5;
+            if (cat.match(/bread|bakery/i)) defaultShelfLifeDays = 4;
+            if (cat.match(/canned|dry|rice|pasta/i)) defaultShelfLifeDays = 80;
+            return {
+              name: j.product.product_name,
+              category: cat,
+              shelfLife: defaultShelfLifeDays,
+            };
+          }
+        } catch (e) { /* ignore */ }
+        return null;
+      }
+
+      // (Mocked) Recipe API
+      const localRecipes = [
+        {
+          id: 1,
+          name: "Vegetable Omelette",
+          img: "https://images.unsplash.com/photo-1519864600265-bca9d17fe535?auto=format&fit=crop&w=200&q=80",
+          ingredients: [
+            { name: "Eggs" },
+            { name: "Onion" },
+            { name: "Tomato" },
+            { name: "Spinach" },
+            { name: "Salt" }
+          ],
+        },
+        {
+          id: 2,
+          name: "Tomato Pasta",
+          img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=200&q=80",
+          ingredients: [
+            { name: "Pasta" },
+            { name: "Tomato" },
+            { name: "Olive Oil" },
+            { name: "Cheese" }
+          ],
+        },
+        {
+          id: 3,
+          name: "Fruit Yogurt Bowl",
+          img: "https://images.unsplash.com/photo-1502741338009-cac2772e18bc?auto=format&fit=crop&w=200&q=80",
+          ingredients: [
+            { name: "Yogurt" },
+            { name: "Banana" },
+            { name: "Berries" },
+            { name: "Honey" }
+          ]
+        },
+        {
+          id: 4,
+          name: "Caprese Salad",
+          img: "https://images.unsplash.com/photo-1464306076886-debca5e8a6b0?auto=format&fit=crop&w=200&q=80",
+          ingredients: [
+            { name: "Tomato" },
+            { name: "Mozzarella" },
+            { name: "Basil" },
+            { name: "Olive Oil" }
+          ]
+        }
+      ];
+
+      // App Start
+      function App() {
+        const [page, setPage] = React.useState("dashboard");
+        const [pantry, setPantry] = React.useState(() =>
+          loadData("pantry", [])
+        );
+        const [showTutorial, setShowTutorial] = React.useState(
+          loadData("shelfLife__seenTutorial", false) ? false : true
+        );
+
+        // Expiration logic: compute items expiring soon/today
+        const today = getTodayDateStr();
+        const soonExp = pantry.filter(
+          item => daysBetween(today, item.expiry) <= 3 && daysBetween(today, item.expiry) >= 0
+        );
+        
+        // Save pantry to localStorage on changes
+        React.useEffect(() => {
+          saveData("pantry", pantry);
+        }, [pantry]);
+
+        // After first visit, flag tutorial as seen
+        React.useEffect(() => {
+          if (!showTutorial) saveData("shelfLife__seenTutorial", true);
+        }, [showTutorial]);
+
+        // Handle basic routing via URL hash (to allow website navigation)
+        React.useEffect(() => {
+          function handleHash() {
+            const h = (window.location.hash || "").replace("#", "");
+            if (["dashboard","pantry","recipes","add"].includes(h)) setPage(h);
+          }
+          window.addEventListener("hashchange", handleHash);
+          handleHash(); // on load
+          return () => window.removeEventListener("hashchange", handleHash);
+        }, []);
+
+        // Main UI rendering
+        return (
+          <React.Fragment>
+            <header>
+              <h1>
+                <a href="/" style={{textDecoration:'none',color:"var(--main-green)"}}>Shelf Life</a>
+              </h1>
+              <nav>
+                <button
+                  className={page === "dashboard" ? "selected" : ""}
+                  onClick={() => { setPage("dashboard"); window.location.hash = "dashboard"; }}
+                >Home</button>
+                <button
+                  className={page === "pantry" ? "selected" : ""}
+                  onClick={() => { setPage("pantry"); window.location.hash = "pantry";}}
+                >Pantry</button>
+                <button
+                  className={page === "recipes" ? "selected" : ""}
+                  onClick={() => { setPage("recipes"); window.location.hash = "recipes";}}
+                >Recipes</button>
+                <button
+                  className={page === "add" ? "selected" : ""}
+                  onClick={() => { setPage("add"); window.location.hash = "add";}}
+                >Add Item</button>
+              </nav>
+            </header>
+            <main>
+              {showTutorial && (
+                <OnboardingTutorial onDone={() => setShowTutorial(false)} />
+              )}
+              {{
+                dashboard: (
+                  <DashboardPage
+                    pantry={pantry}
+                    soonExp={soonExp}
+                    goPantry={() => { setPage("pantry"); window.location.hash="pantry";}}
+                    goAdd={() => { setPage("add"); window.location.hash="add";}}
+                  />
+                ),
+                add: (
+                  <AddItemPage
+                    onAdd={item => {
+                      setPantry([
+                        ...pantry,
+                        {
+                          ...item,
+                          id: Date.now() + Math.random(),
+                        }
+                      ]);
+                      setPage("pantry");
+                      window.location.hash = "pantry";
+                    }}
+                  />
+                ),
+                pantry: (
+                  <PantryPage
+                    pantry={pantry}
+                    setPantry={setPantry}
+                    today={today}
+                  />
+                ),
+                recipes: (
+                  <RecipesPage
+                    pantry={pantry}
+                    updatePantry={setPantry}
+                    today={today}
+                  />
+                )
+              }[page]}
+            </main>
+          </React.Fragment>
+        );
+      }
+
+      // Onboarding tutorial
+      function OnboardingTutorial({ onDone }) {
+        return (
+          <div className="tutorial">
+            <div style={{ marginBottom: 7, fontWeight: 600 }}>
+              👋 Welcome to Shelf Life!
+            </div>
+            <ul style={{ paddingLeft: 22, margin: 0 }}>
+              <li>Scan or enter a barcode to add food items using your camera or keyboard.</li>
+              <li>Track expiry dates and see what’s expiring soon.</li>
+              <li>Get recipe ideas using what you have at home.</li>
+            </ul>
+            <button className="add-btn" style={{marginTop:10}} onClick={onDone}>Let's Go</button>
+          </div>
+        );
+      }
+
+      // BarcodeScanner Modal Component
+      function BarcodeScannerModal({ onDetected, onCancel }) {
+        const videoRef = React.useRef(null);
+        const [error, setError] = React.useState(null);
+
+        React.useEffect(() => {
+          if (!window.Quagga) return setError("Barcode scanner unavailable. Try refreshing.");
+
+          window.Quagga.init({
+            inputStream: {
+              type: "LiveStream",
+              constraints: {
+                width: { ideal: 640 },
+                height: { ideal: 480 },
+                facingMode: "environment",
+                aspectRatio: { ideal: 1.333 }
+              },
+              area: {
+                top: "0%",
+                right: "0%",
+                left: "0%",
+                bottom: "0%"
+              },
+              target: videoRef.current
+            },
+            locator: { patchSize: "medium", halfSample: true },
+            numOfWorkers: 1,
+            decoder: {
+              readers: [
+                "ean_reader",
+                "ean_8_reader",
+                "upc_reader",
+                "upc_e_reader",
+                "code_128_reader"
+              ]
+            },
+            locate: true
+          }, function(err) {
+            if (err) {
+              setError("Could not start camera: " + err.message);
+              return;
+            }
+            window.Quagga.start();
+          });
+
+          window.Quagga.onDetected(handleDetected);
+
+          function handleDetected(result) {
+            if (
+              result &&
+              result.codeResult &&
+              /^[0-9]{5,15}$/.test(result.codeResult.code)
+            ) {
+              window.Quagga.offDetected(handleDetected);
+              window.Quagga.stop();
+              onDetected(result.codeResult.code);
+            }
+          }
+
+          return () => {
+            try { window.Quagga.stop(); } catch(e){}
+            window.Quagga.offDetected(handleDetected);
+          };
+        }, []);
+
+        return (
+          <div className="barcode-scanner-modal">
+            <div className="barcode-scanner-inner">
+              <div style={{fontWeight:600, fontSize:'1.08em', marginBottom:7}}>Scan barcode</div>
+              <div className="barcode-scanner-video-wrapper">
+                <div ref={videoRef}>
+                  <video className="barcode-video" style={{width:"100%"}} autoPlay muted playsInline />
+                </div>
+              </div>
+              <div style={{ marginTop: 8, color: "#666", fontSize:"0.97em" }}>
+                {error ? (
+                  <span style={{ color: "var(--warn-red)" }}>{error}</span>
+                ) : (
+                  "Align the barcode in the frame. Auto-detect will fill the field."
+                )}
+              </div>
+              <button className="barcode-close-btn" onClick={onCancel}>Cancel</button>
+            </div>
+          </div>
+        );
+      }
+
+      // DashboardPage
+      function DashboardPage({ pantry, soonExp, goPantry, goAdd }) {
+        return (
+          <div>
+            <div className="dashboard-stats">
+              <div className="stat-card">
+                <div className="stat-big">{pantry.length}</div>
+                <div style={{fontWeight: 600}}>Items in Pantry</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-big expiring-soon">{soonExp.length}</div>
+                <div style={{fontWeight: 600}}>Expiring soon</div>
+              </div>
+            </div>
+            <button className="add-btn" onClick={goAdd}>+ Add New Item</button>
+            <div className="section-title" style={{marginTop:'22px'}}>3 Expiring Soon:</div>
+            <ul style={{margin:0, padding:0, listStyle: "none"}}>
+              {soonExp.slice(0,3).length === 0 && (
+                <li style={{color:'#888'}}>No items nearing expiry 🎉</li>
+              )}
+              {soonExp
+                .sort((a,b) => a.expiry.localeCompare(b.expiry))
+                .slice(0,3)
+                .map(item =>
+                  <li key={item.id} style={{marginBottom:9, background:'#ffe8e5',borderRadius:'8px',padding:'7px 11px'}}>
+                    <span style={{fontWeight:600}}>{item.name}</span> — <span className="expiring">{daysBetween(getTodayDateStr(),item.expiry)} days left</span>
+                  </li>
+                )}
+            </ul>
+            <button className="add-btn" style={{marginTop:23}} onClick={goPantry}>View Full Pantry</button>
+          </div>
+        );
+      }
+
+      // Add item page: barcode or manual
+      function AddItemPage({ onAdd }) {
+        const [step, setStep] = React.useState("scan");
+        const [barcode, setBarcode] = React.useState("");
+        const [lookup, setLookup] = React.useState(null);
+        const [fetching, setFetching] = React.useState(false);
+        const [err, setErr] = React.useState("");
+        const [manual, setManual] = React.useState(false);
+        const [form, setForm] = React.useState({
+          name: "",
+          quantity: 1,
+          expiry: getTodayDateStr()
+        });
+
+        // Barcode Scanner Modal
+        const [showScanner, setShowScanner] = React.useState(false);
+
+        // Barcode lookup
+        async function handleLookup(e) {
+          e.preventDefault();
+          setErr("");
+          setFetching(true);
+          const info = await lookupFoodByBarcode(barcode.trim());
+          setFetching(false);
+          if (info) {
+            setLookup(info);
+            setForm(f => ({
+              ...f,
+              name: info.name,
+              expiry: getTodayDateStr(info.shelfLife
+                                        ? new Date(Date.now() + info.shelfLife*86400000).toISOString().slice(0,10)
+                                        : undefined)
+            }));
+            setStep("confirm");
+          } else {
+            setErr("Item not found via barcode. Please enter manually.");
+            setManual(true);
+            setStep("manual");
+          }
+        }
+
+        // Handle manual or confirm add
+        function handleAdd(e) {
+          e.preventDefault();
+          if (!form.name || !form.expiry || !/^\d+$/.test(form.quantity)) {
+            setErr("Please fill all fields.");
+            return;
+          }
+          onAdd({
+            name: form.name,
+            quantity: Number(form.quantity),
+            expiry: form.expiry,
+            category: lookup?.category || "Uncategorized"
+          });
+        }
+
+        // On barcode detected from scanner
+        function handleDetect(scannedCode) {
+          setBarcode("" + scannedCode);
+          setShowScanner(false);
+        }
+        function handleStartScanner(e) {
+          e.preventDefault();
+          setShowScanner(true);
+        }
+
+        return (
+          <div>
+            <div className="section-title">Add Pantry Item</div>
+            {step === "scan" && (
+              <form onSubmit={handleLookup}>
+                <label>
+                  Scan or enter barcode:
+                  <input
+                    pattern="[0-9]{5,14}"
+                    inputMode="numeric"
+                    maxLength={14}
+                    autoFocus
+                    required
+                    value={barcode}
+                    onChange={e => setBarcode(e.target.value.replace(/\D/g,""))}
+                  />
+                </label>
+                <div style={{display:"flex",gap:"10px",marginBottom:4}}>
+                  <button className="add-btn" disabled={fetching}>Lookup</button>
+                  <button
+                    type="button"
+                    className="add-btn"
+                    style={{
+                      background: '#fff',
+                      color: 'var(--main-green)',
+                      border: '1.5px solid var(--main-green)',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                    onClick={handleStartScanner}
+                  >
+                    <span role="img" aria-label="Scan" style={{marginRight:6}}>📷</span>
+                    Camera Scan
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  className="add-btn"
+                  style={{background:'#fff',color:'var(--main-orange)',border:'1.5px solid var(--main-orange)'}}
+                  onClick={() => {setManual(true);setStep("manual")}}
+                >
+                  Enter Manually
+                </button>
+                {err && <div className="alert">{err}</div>}
+                <div style={{fontSize:'0.94em',marginTop:7, color:'#888'}}>Powered by OpenFoodFacts 🚀</div>
+                {showScanner && (
+                  <BarcodeScannerModal
+                    onDetected={(code) => {
+                      handleDetect(code);
+                    }}
+                    onCancel={() => setShowScanner(false)}
+                  />
+                )}
+              </form>
+            )}
+            {(step === "confirm" || step==="manual") && (
+              <form onSubmit={handleAdd}>
+                <label>
+                  Name:
+                  <input
+                    required
+                    value={form.name}
+                    onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  />
+                </label>
+                <label>
+                  Quantity:
+                  <input
+                    type="number"
+                    min="1"
+                    max="99"
+                    required
+                    value={form.quantity}
+                    onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))}
+                  />
+                </label>
+                <label>
+                  Expiration Date:
+                  <input
+                    type="date"
+                    required
+                    value={form.expiry}
+                    min={getTodayDateStr()}
+                    onChange={e => setForm(f => ({ ...f, expiry: e.target.value }))}
+                  />
+                </label>
+                <button className="add-btn" type="submit">Add to Pantry</button>
+                <button className="add-btn" type="button" style={{background:'#fff',color:'var(--main-green)',border:'1.5px solid var(--main-green)'}} onClick={() => {setStep("scan");setManual(false);setBarcode("");setErr("");}}>Back</button>
+                {((lookup && lookup.shelfLife !== undefined) || (lookup && lookup.category)) && (
+                  <div style={{fontSize:'0.94em',marginTop:7, color:'#888'}}>
+                    Suggested: {lookup.name} ({lookup.category || "uncategorized"}), default shelf life {lookup.shelfLife} days
+                  </div>
+                )}
+                {err && <div className="alert">{err}</div>}
+              </form>
+            )}
+          </div>
+        );
+      }
+
+      // Pantry page
+      function PantryPage({ pantry, setPantry, today }) {
+        const pantrySorted = [...pantry].sort((a, b) => a.expiry.localeCompare(b.expiry));
+        const [editItem, setEditItem] = React.useState(null);
+
+        function deleteItem(id) {
+          if (window.confirm("Remove this item from pantry?")) {
+            setPantry(pantry.filter(item => item.id !== id));
+          }
+        }
+        function markUsed(id) {
+          setPantry(
+            pantry.map(item =>
+              item.id === id
+                ? { ...item, quantity: Math.max(0, item.quantity - 1)} : item
+            ).filter(item => item.quantity > 0)
+          );
+        }
+        function beginEdit(item) {
+          setEditItem(item);
+        }
+        function handleEditSave(newItem) {
+          setPantry(pantry.map(item => item.id===newItem.id? newItem : item));
+          setEditItem(null);
+        }
+
+        return (
+          <div>
+            <div className="section-title">Your Pantry</div>
+            {pantry.length === 0 && (
+              <div style={{margin:'30px 0',color:'#666'}}>Your pantry's empty. Click <b>+ Add New Item</b>!</div>
+            )}
+            <div className="pantry-list">
+              {pantrySorted.map(item =>
+                <div
+                  key={item.id}
+                  className={"pantry-card" +
+                  (daysBetween(today, item.expiry) <= 3 && daysBetween(today, item.expiry) >= 0
+                    ? " expiring-soon-item"
+                    : "")
+                  }
+                >
+                  <div className="item-details">
+                    <div className="item-name">{item.name}</div>
+                    <div className="expiry">
+                      Expires:&nbsp; <span>{item.expiry}</span>
+                      <span className={
+                        "expiry-countdown " +
+                        (daysBetween(today, item.expiry) < 0
+                          ? ""
+                          : daysBetween(today, item.expiry) <= 1
+                          ? "expiring"
+                          : daysBetween(today, item.expiry) <= 3
+                          ? "expiring-medium"
+                          : "")
+                      }>
+                        {daysBetween(today, item.expiry) < 0
+                          ? "Expired"
+                          : daysBetween(today, item.expiry) === 0
+                          ? "Today!"
+                          : daysBetween(today, item.expiry) + " days left"}
+                      </span>
+                    </div>
+                    <div>Qty: {item.quantity}</div>
+                  </div>
+                  <div className="pantry-actions">
+                    <button title="Mark as used" className="icon-btn" onClick={() => markUsed(item.id)}>✔️</button>
+                    <button title="Edit" className="icon-btn" onClick={() => beginEdit(item)}>✏️</button>
+                    <button title="Delete" className="icon-btn" onClick={() => deleteItem(item.id)}>🗑️</button>
+                  </div>
+                  {editItem && editItem.id===item.id && (
+                    <EditModal
+                      item={editItem}
+                      onClose={() => setEditItem(null)}
+                      onSave={handleEditSave}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      function EditModal({ item, onSave, onClose }) {
+        const [form, setForm] = React.useState({
+          ...item
+        });
+        return (
+          <div style={{
+            position:"fixed",top:0,left:0,width:"100vw",height:"100vh",
+            background:"#0004",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center"
+          }}>
+            <form
+              style={{background:"#fff",padding:32,borderRadius:16,boxShadow:"0 2px 18px #0002",minWidth:320}}
+              onSubmit={e=>{
+                e.preventDefault();
+                onSave(form);
+              }}
+            >
+              <label>Name:
+                <input
+                  required
+                  value={form.name}
+                  onChange={e=>setForm(f=>({...f,name:e.target.value}))}
+                />
+              </label>
+              <label>Quantity:
+                <input
+                  required
+                  type="number"
+                  min="1"
+                  value={form.quantity}
+                  onChange={e=>setForm(f=>({...f,quantity: Number(e.target.value)}))}
+                />
+              </label>
+              <label>Expiration date:
+                <input
+                  required
+                  type="date"
+                  value={form.expiry}
+                  onChange={e=>setForm(f=>({...f,expiry:e.target.value}))}
+                />
+              </label>
+              <button className="add-btn" type="submit">Save</button>
+              <button
+                type="button"
+                className="add-btn"
+                style={{background:'#fff',color:'var(--main-green)',border:'1.5px solid var(--main-green)'}}
+                onClick={onClose}
+              >Cancel</button>
+            </form>
+          </div>
+        );
+      }
+
+      // Recipe suggestion page
+      function RecipesPage({ pantry, updatePantry, today }) {
+        const [recipes, setRecipes] = React.useState(localRecipes);
+        const [using, setUsing] = React.useState(null);
+        // For MVP, use localRecipes, but suggest ones that use items in pantry (or expiring soon)
+        
+        // Find pantry inventory as a set of lowercased names
+        const pantrySet = new Set(pantry.map(i => i.name.toLowerCase()));
+        // Prioritize recipes matching items, sorted by #close to expiry
+        function recipeScore(recipe) {
+          let pts = 0;
+          for (let ing of recipe.ingredients) {
+            let match = pantry.find(item =>
+              item.name.toLowerCase() === ing.name.toLowerCase()
+            );
+            if (match) {
+              pts += 1;
+              if (daysBetween(today, match.expiry) <= 3)
+                pts += 1;
+            }
+          }
+          return pts;
+        }
+        const topRecipes = recipes
+          .map(r => ({...r, score: recipeScore(r)}))
+          .filter(r => r.score > 0)
+          .sort((a,b)=>b.score-a.score)
+          .slice(0,5);
+
+        function canMake(recipe) {
+          return recipe.ingredients.some(ing =>
+            pantry.find(item => item.name.toLowerCase() === ing.name.toLowerCase())
+          );
+        }
+        function handleUseRecipe(rec) {
+          let used = [];
+          let updatedPantry = pantry.map(item => {
+            let match = rec.ingredients.find(
+              ing => item.name.toLowerCase() === ing.name.toLowerCase()
+            );
+            if (match && item.quantity > 0) {
+              used.push(item.name);
+              return {...item, quantity: item.quantity - 1};
+            }
+            return item;
+          }).filter(item => item.quantity > 0);
+          updatePantry(updatedPantry);
+          setUsing(rec);
+          setTimeout(()=>setUsing(null),1500);
+        }
+        return (
+          <div>
+            <div className="section-title">AI Recipe Suggestions</div>
+            {topRecipes.length === 0 && (
+              <div style={{margin:'30px 0',color:'#666'}}>No recipes found with your pantry. Add more items!</div>
+            )}
+            <div className="recipe-list">
+              {topRecipes.map(rec =>
+                <div key={rec.id} className="recipe-card">
+                  <img className="recipe-img" src={rec.img} alt={rec.name} />
+                  <div className="recipe-details">
+                    <div className="recipe-name">{rec.name}</div>
+                    <div className="ingredients-list">
+                      {rec.ingredients.map(ing => {
+                        let p = pantry.find(
+                          i => i.name.toLowerCase() === ing.name.toLowerCase()
+                        );
+                        let cls = "ingredient";
+                        if (p) {
+                          cls += " in-pantry";
+                          if (daysBetween(today, p.expiry) <= 3)
+                            cls += " soon-expire";
+                        }
+                        return (
+                          <span key={ing.name} className={cls}>
+                            {ing.name}
+                          </span>
+                        );
+                      })}
+                    </div>
+                    <button
+                      className="use-recipe-btn"
+                      onClick={() => handleUseRecipe(rec)}
+                      disabled={!canMake(rec) || !!using}
+                    >
+                      Cook & Use Ingredients
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+            {using && (
+              <div className="tutorial" style={{background: "var(--main-green)", color:"#fff",margin:'20px 0'}}>
+                Marked ingredients as used: <b>{using.name}</b>! Pantry updated.
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      // Render
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+  </body>
+</html>
